@@ -1,0 +1,7 @@
+config.env
+.env
+market.db
+*.db-journal
+backfill_progress.json
+logs/
+logs/*.log

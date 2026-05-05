@@ -1,0 +1,7 @@
+# Pin loosely; align with your OpenBB install (Python >= 3.10).
+openbb>=4.7,<5
+openbb-fmp>=1.6,<2
+sqlalchemy>=2.0,<3
+python-dotenv>=1.0,<2
+psycopg[binary]>=3.2,<4
+pandas>=2.0,<3

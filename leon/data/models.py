@@ -145,3 +145,25 @@ class PanicLiquidityScore(Base):
         Index("ix_panic_score_date", "score_date"),
         Index("ix_panic_regime", "regime"),
     )
+
+
+class MacroValuationScore(Base):
+    """Derived macro valuation scores for major US indices."""
+
+    __tablename__ = "macro_valuation_scores"
+
+    score_date: Mapped[date] = mapped_column(Date(), primary_key=True)
+    index_code: Mapped[str] = mapped_column(String(32), primary_key=True)  # SP500 / NASDAQCOM
+    valuation_score: Mapped[float] = mapped_column(Float)  # 0-100, higher = more expensive/richer
+    level_value: Mapped[float | None] = mapped_column(Float)
+    level_percentile_5y: Mapped[float | None] = mapped_column(Float)  # 0-1
+    macro_pressure_score: Mapped[float | None] = mapped_column(Float)  # 0-1
+    valuation_zone: Mapped[str] = mapped_column(String(32))  # very_low / low / neutral / high / very_high
+    components_json: Mapped[dict | None] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_macro_valuation_date", "score_date"),
+        Index("ix_macro_valuation_index", "index_code"),
+        Index("ix_macro_valuation_zone", "valuation_zone"),
+    )

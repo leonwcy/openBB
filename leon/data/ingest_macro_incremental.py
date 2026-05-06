@@ -23,6 +23,7 @@ import ingest_daily_snapshot  # noqa: F401, E402
 
 from database import engine_label, get_engines, init_db, session_scope  # noqa: E402
 from alt_pizza_source import load_alt_series_rows  # noqa: E402
+from earnings_growth_source import load_earnings_growth_rows  # noqa: E402
 from macro_repo import upsert_macro_observation, upsert_macro_series_state  # noqa: E402
 from macro_series_seed import seed_macro_catalog  # noqa: E402
 from models import IngestionRun, MacroSeriesCatalog, MacroSeriesState  # noqa: E402
@@ -117,6 +118,8 @@ def _load_catalog_with_state(session, max_priority: int) -> list[tuple[MacroSeri
 
 def _extract_series_rows(obb, item: MacroSeriesCatalog, start_date: date, end_date: date) -> list[dict]:
     if item.provider == "alt":
+        if item.series_id in {"SP500_EARNINGS_GROWTH", "NASDAQ_EARNINGS_GROWTH"}:
+            return load_earnings_growth_rows(item.series_id, start_date, end_date)
         return load_alt_series_rows(item.series_id, start_date, end_date)
     if item.provider != "fred":
         return []

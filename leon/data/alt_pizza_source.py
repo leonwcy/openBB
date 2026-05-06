@@ -1,4 +1,4 @@
-"""Alternative macro series loaders (e.g. Nothing Ever Happens Index).
+"""Alternative macro series loaders (PIZZA index).
 
 This module intentionally avoids CSV files and expects API/JSON payloads.
 """
@@ -63,8 +63,8 @@ def _load_from_fallback_page(series_id: str, start_date: date, end_date: date) -
     ]
 
 
-def _load_neh_history_rows(series_id: str, start_date: date, end_date: date, scale: float) -> list[dict]:
-    """Load NEH history endpoint and normalize to one row per day (last observation)."""
+def _load_pizza_history_rows(series_id: str, start_date: date, end_date: date, scale: float) -> list[dict]:
+    """Load PIZZA history endpoint and normalize to one row per day (last observation)."""
     try:
         with urlopen(_history_url(), timeout=20) as r:
             payload = json.loads(r.read().decode("utf-8"))
@@ -120,6 +120,29 @@ def _load_neh_history_rows(series_id: str, start_date: date, end_date: date, sca
     return rows
 
 
+def _load_pizza_realtime_row(payload: dict, series_id: str, start_date: date, end_date: date, scale: float) -> list[dict]:
+    """Build one realtime row from endpoint payload if date in range."""
+    ts = pd.to_datetime(payload.get("timestamp"), errors="coerce")
+    d = ts.date() if pd.notna(ts) else date.today()
+    if not (start_date <= d <= end_date):
+        return []
+    try:
+        v = float(payload.get("global_index"))
+    except Exception:  # noqa: BLE001
+        return []
+    return [
+        {
+            "provider": "alt",
+            "series_id": series_id,
+            "observation_date": d,
+            "value": v * scale,
+            "value_text": payload.get("label"),
+            "vintage_date": date.today(),
+            "released_at": None,
+        }
+    ]
+
+
 def load_alt_series_rows(series_id: str, start_date: date, end_date: date) -> list[dict]:
     """Load an alternative series from JSON API and normalize to macro rows.
 
@@ -150,26 +173,20 @@ def load_alt_series_rows(series_id: str, start_date: date, end_date: date) -> li
         # URL may be HTML or unavailable -> fallback parser.
         return _load_from_fallback_page(series_id, start_date, end_date)
 
-    # Dedicated NEH endpoint shape: {"global_index": 37, "timestamp": "...", ...}
+    # Dedicated endpoint shape: {"global_index": 37, "timestamp": "...", ...}
     if isinstance(payload, dict) and "global_index" in payload:
-        history_rows = _load_neh_history_rows(series_id, start_date, end_date, scale)
-        if history_rows:
-            return history_rows
-        ts = pd.to_datetime(payload.get("timestamp"), errors="coerce")
-        d = ts.date() if pd.notna(ts) else date.today()
-        if start_date <= d <= end_date:
-            return [
-                {
-                    "provider": "alt",
-                    "series_id": "NOTHING_EVER_HAPPENS_INDEX",
-                    "observation_date": d,
-                    "value": float(payload.get("global_index")) * scale,
-                    "value_text": payload.get("label"),
-                    "vintage_date": date.today(),
-                    "released_at": None,
-                }
-            ]
-        return []
+        history_rows = _load_pizza_history_rows(series_id, start_date, end_date, scale)
+        realtime_rows = _load_pizza_realtime_row(payload, series_id, start_date, end_date, scale)
+        if not history_rows:
+            return realtime_rows
+
+        # Merge realtime today-point to avoid stale history endpoint blocking latest value.
+        merged = {(r["observation_date"], r["vintage_date"]): r for r in history_rows}
+        for r in realtime_rows:
+            merged[(r["observation_date"], r["vintage_date"])] = r
+        out = list(merged.values())
+        out.sort(key=lambda x: (x["observation_date"], x["vintage_date"]))
+        return out
 
     if isinstance(payload, list):
         data = payload

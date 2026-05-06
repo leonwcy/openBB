@@ -14,6 +14,7 @@ from models import (
     DailyQuote,
     IngestionRun,
     MacroObservation,
+    MacroValuationScore,
     MacroSeriesCatalog,
     MacroSeriesState,
     PanicLiquidityScore,
@@ -82,6 +83,7 @@ def init_db(engines=None):
         MacroSeriesCatalog.__table__,
         MacroSeriesState.__table__,
         PanicLiquidityScore.__table__,
+        MacroValuationScore.__table__,
     ]
     for eng in targets:
         Base.metadata.create_all(eng, tables=auxiliary)

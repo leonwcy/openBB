@@ -6,6 +6,8 @@ from datetime import date, datetime, timezone
 
 from models import MacroObservation, MacroSeriesState
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 
 def upsert_macro_observation(
@@ -19,6 +21,30 @@ def upsert_macro_observation(
     vintage_date: date,
     released_at: datetime | None,
 ) -> None:
+    row = {
+        "provider": provider,
+        "series_id": series_id,
+        "observation_date": observation_date,
+        "vintage_date": vintage_date,
+        "value": value,
+        "value_text": value_text,
+        "released_at": released_at,
+        "ingested_at": datetime.now(timezone.utc).replace(tzinfo=None),
+    }
+    dialect = session.bind.dialect.name if session.bind is not None else ""
+    if dialect == "postgresql":
+        stmt = pg_insert(MacroObservation).values(**row).on_conflict_do_nothing(
+            index_elements=["provider", "series_id", "observation_date", "vintage_date"]
+        )
+        session.execute(stmt)
+        return
+    if dialect == "sqlite":
+        stmt = sqlite_insert(MacroObservation).values(**row).on_conflict_do_nothing(
+            index_elements=["provider", "series_id", "observation_date", "vintage_date"]
+        )
+        session.execute(stmt)
+        return
+
     existing = session.execute(
         select(MacroObservation).where(
             MacroObservation.provider == provider,
@@ -27,24 +53,8 @@ def upsert_macro_observation(
             MacroObservation.vintage_date == vintage_date,
         )
     ).scalar_one_or_none()
-    if existing:
-        existing.value = value
-        existing.value_text = value_text
-        existing.released_at = released_at
-        existing.ingested_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    else:
-        session.add(
-            MacroObservation(
-                provider=provider,
-                series_id=series_id,
-                observation_date=observation_date,
-                vintage_date=vintage_date,
-                value=value,
-                value_text=value_text,
-                released_at=released_at,
-                ingested_at=datetime.now(timezone.utc).replace(tzinfo=None),
-            )
-        )
+    if existing is None:
+        session.add(MacroObservation(**row))
 
 
 def upsert_macro_series_state(

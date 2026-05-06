@@ -37,6 +37,7 @@
 - `macro_series_seed.py`：写入/更新宏观系列清单（`macro_series_catalog`）
 - `ingest_macro_full.py`：宏观全量回填（默认 5 年）
 - `ingest_macro_incremental.py`：宏观增量更新（带 bootstrap 回退能力）
+- `ingest_alt_earnings_growth.py`：补充落库标普/纳指盈利增速（`SP500_EARNINGS_GROWTH` / `NASDAQ_EARNINGS_GROWTH`）
 - `macro_repo.py`：宏观表 upsert 与 state 更新逻辑
 - `run_macro_full.bat`：宏观全量任务入口
 - `run_macro_incremental.bat`：宏观增量任务入口
@@ -44,10 +45,23 @@
 ### 指标构建
 
 - `build_panic_liquidity_score.py`：构建恐慌/流动性评分并写入 `panic_liquidity_scores`
+- `build_macro_valuation_score.py`：构建宏观估值评分（标普500/纳指高低位）并写入 `macro_valuation_scores`
 
-### 另类数据（NEH 指数）
+`build_panic_liquidity_score.py` 当前使用的无 TED 新公式（TEDRATE 已停更并移除）：
 
-- `alt_pizza_source.py`：从 API/JSON 读取 `NOTHING_EVER_HAPPENS_INDEX`（不使用 CSV 文件），并通过宏观全量/增量脚本落库到 PostgreSQL
+- `panic_score = 100 * (0.30*p_vix + 0.25*p_hy + 0.15*p_ig + 0.15*p_nfci + 0.15*p_repo)`
+- `liquidity_score = 100 * (0.45*p_repo + 0.25*p_nfci + 0.30*p_hy)`
+
+其中：
+- `p_vix`：`VIXCLS` 的滚动分位
+- `p_hy`：`BAMLH0A0HYM2`（HY OAS）的滚动分位
+- `p_ig`：`BAMLC0A0CM`（IG OAS）的滚动分位
+- `p_nfci`：`NFCI` 的滚动分位
+- `p_repo`：`SOFR - DFF` 的滚动分位
+
+### 另类数据（PIZZA 指数）
+
+- `alt_pizza_source.py`：从 API/JSON 读取 `PIZZA`（不使用 CSV 文件），并通过宏观全量/增量脚本落库到 PostgreSQL
 - `check_pizza_source.py`：URL 连通性与字段预检查（跑全量前先验 API 结构）
   - 若 URL 不是 JSON，会自动尝试 fallback：从 `LEON_PIZZA_FALLBACK_URL` 页面提取 `DOUGHCON` 生成当日值
 
@@ -118,7 +132,9 @@ python leon/data/ingest_eod_backfill.py
 python leon/data/macro_series_seed.py
 python leon/data/check_pizza_source.py
 python leon/data/ingest_macro_full.py
+python leon/data/ingest_alt_earnings_growth.py
 python leon/data/build_panic_liquidity_score.py
+python leon/data/build_macro_valuation_score.py
 ```
 
 关键参数（`config.env`）：
@@ -141,7 +157,9 @@ python leon/data/ingest_daily_snapshot.py
 
 ```bash
 python leon/data/ingest_macro_incremental.py
+python leon/data/ingest_alt_earnings_growth.py
 python leon/data/build_panic_liquidity_score.py
+python leon/data/build_macro_valuation_score.py
 ```
 
 说明：`ingest_macro_incremental.py` 在没有 state 时会自动按 `LEON_MACRO_BOOTSTRAP_YEARS` 回退补数，不会只做“空增量”。

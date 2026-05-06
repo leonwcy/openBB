@@ -38,8 +38,7 @@ def _cfg() -> dict[str, str]:
         "value_col": os.environ.get("LEON_PIZZA_JSON_VALUE_FIELD", "value").strip() or "value",
         "series_col": os.environ.get("LEON_PIZZA_JSON_SERIES_FIELD", "series_id").strip() or "series_id",
         "scale": os.environ.get("LEON_PIZZA_SOURCE_SCALE", "1.0").strip() or "1.0",
-        "series_id": os.environ.get("LEON_PIZZA_TEST_SERIES_ID", "NOTHING_EVER_HAPPENS_INDEX").strip()
-        or "NOTHING_EVER_HAPPENS_INDEX",
+        "series_id": os.environ.get("LEON_PIZZA_TEST_SERIES_ID", "PIZZA").strip() or "PIZZA",
     }
 
 
@@ -101,7 +100,7 @@ def _run() -> int:
     print(f"OK: URL reachable, payload bytes={bytes_len}, payload_type={type(payload).__name__}")
     if isinstance(payload, dict) and "global_index" in payload:
         print(
-            f"OK: detected NEH endpoint shape: global_index={payload.get('global_index')} "
+            f"OK: detected PIZZA endpoint shape: global_index={payload.get('global_index')} "
             f"timestamp={payload.get('timestamp')}"
         )
         end = date.today()
@@ -111,7 +110,7 @@ def _run() -> int:
             print(f"OK: normalized rows={len(rows)} in [{start}..{end}]")
             print(f"Sample: {rows[0]}")
             return 0
-        print("FAIL: could not normalize NEH endpoint payload.")
+        print("FAIL: could not normalize PIZZA endpoint payload.")
         return 2
 
     df = _extract_df(payload, cfg["root_key"])

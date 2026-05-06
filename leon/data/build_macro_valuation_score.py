@@ -1,4 +1,4 @@
-"""Backward-compatible entrypoint for panic/liquidity score builder."""
+"""Backward-compatible entrypoint for macro valuation score builder."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ ROOT_DIR = THIS_DIR.parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from leon.calc.build_panic_liquidity_score import _run
+from leon.calc.build_macro_valuation_score import _run
 
 
 if __name__ == "__main__":

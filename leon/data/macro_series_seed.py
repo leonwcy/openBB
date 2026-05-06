@@ -11,7 +11,7 @@ from sqlalchemy import select
 # Prioritized US macro panel for equity market analysis.
 DEFAULT_MACRO_SERIES = [
     # Alternative / geopolitical proxy
-    {"provider": "alt", "series_id": "PIZZA", "series_name": "Nothing Ever Happens Index (NEH)", "category": "fear", "frequency": "daily", "priority_tier": 2},
+    {"provider": "alt", "series_id": "PIZZA", "series_name": "PIZZA Index", "category": "fear", "frequency": "daily", "priority_tier": 2},
     # Panic / fear
     {"provider": "fred", "series_id": "VIXCLS", "series_name": "CBOE Volatility Index (VIX)", "category": "fear", "frequency": "daily", "priority_tier": 1},
     {"provider": "fred", "series_id": "TEDRATE", "series_name": "TED Spread", "category": "liquidity", "frequency": "daily", "priority_tier": 1},
@@ -40,6 +40,14 @@ DEFAULT_MACRO_SERIES = [
     {"provider": "fred", "series_id": "BAMLH0A0HYM2", "series_name": "US High Yield OAS", "category": "credit", "frequency": "daily", "priority_tier": 1},
     {"provider": "fred", "series_id": "BAMLC0A0CM", "series_name": "US Corporate Master OAS", "category": "credit", "frequency": "daily", "priority_tier": 1},
     {"provider": "fred", "series_id": "M2SL", "series_name": "M2 Money Stock", "category": "liquidity", "frequency": "monthly", "priority_tier": 1},
+    {"provider": "fred", "series_id": "CP", "series_name": "Corporate Profits After Tax", "category": "valuation", "frequency": "quarterly", "priority_tier": 2},
+    # Index level anchors for valuation measurement
+    {"provider": "fred", "series_id": "SP500", "series_name": "S&P 500 Index", "category": "valuation", "frequency": "daily", "priority_tier": 2},
+    {"provider": "fred", "series_id": "NASDAQCOM", "series_name": "NASDAQ Composite Index", "category": "valuation", "frequency": "daily", "priority_tier": 2},
+    {"provider": "fred", "series_id": "NASDAQ100", "series_name": "NASDAQ 100 Index", "category": "valuation", "frequency": "daily", "priority_tier": 2},
+    # Alt earnings-growth series (ingested by ingest_alt_earnings_growth.py)
+    {"provider": "alt", "series_id": "SP500_EARNINGS_GROWTH", "series_name": "S&P 500 Earnings YoY Growth", "category": "valuation", "frequency": "quarterly", "priority_tier": 2},
+    {"provider": "alt", "series_id": "NASDAQ_EARNINGS_GROWTH", "series_name": "Nasdaq Earnings YoY Growth", "category": "valuation", "frequency": "quarterly", "priority_tier": 2},
 ]
 
 
@@ -84,17 +92,6 @@ def seed_macro_catalog() -> None:
                         )
                     )
             session.commit()
-            # Disable deprecated alternative series so incremental/full won't use it.
-            deprecated = session.execute(
-                select(MacroSeriesCatalog).where(
-                    MacroSeriesCatalog.provider == "alt",
-                    MacroSeriesCatalog.series_id == "PENTAGON_PIZZA_INDEX",
-                )
-            ).scalar_one_or_none()
-            if deprecated and deprecated.is_active:
-                deprecated.is_active = False
-                deprecated.updated_at = now
-                session.commit()
 
 
 if __name__ == "__main__":
